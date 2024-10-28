@@ -5,24 +5,28 @@ from mavros_msgs.srv import CommandBool, SetMode
 from mavros_msgs.msg import ActuatorControl
 from qr_code_module import QRCodeHandler
 from drone_movement_module import DroneMovement
+from sensor_msgs.msg import LaserScan
 
 class OffboardNode(Node):
     def __init__(self):
         super().__init__('offboard')
 
-        # Настройка публикаторов и сервисов MAVROS
-        self.setpoint_pub = self.create_publisher(PoseStamped, "/mavros/setpoint_position/local", 10)
+        # Настройка публикаторов, подписчиков и сервисов MAVROS
+        self.setpoint_pub = self.create_publisher(PoseStamped, "/mavros/setpoint_position/local", 10) # публикатор координат и ориентации
         self.arming_s = self.create_client(CommandBool, "/mavros/cmd/arming")
         self.set_mode = self.create_client(SetMode, "/mavros/set_mode")
-        
-        # Публикация для управления скоростью двигателей
-        self.actuator_control_pub = self.create_publisher(ActuatorControl, "/mavros/setpoint_raw/attitude", 10)
+        self.lidar_scan_sub = self.create_subscription(LaserScan, '/uav1/scan', self.lidar_callback, 10) # подписка на лидар
+        self.actuator_control_pub = self.create_publisher(ActuatorControl, "/mavros/setpoint_raw/attitude", 10) # управления скоростью двигателей
 
         # Инициализация начальной позиции и состояния
         self.point = PoseStamped()
         self.point.pose.position.x = 0.0
         self.point.pose.position.y = 0.0
-        self.point.pose.position.z = 2.3  # Высота взлета
+        self.point.pose.position.z = 2.0  # Высота взлета
+
+        ## lidar intialiser
+        self.lidar = LaserScan
+        # self.lidar
 
         ## Тут подключение новых модулей(файлов)
         # Инициализация модулей
@@ -44,8 +48,7 @@ class OffboardNode(Node):
         ## Тут вызов функций из других модулей
         # Подключение подписчиков на изображения и запуск движения
         self.qr_handler.__init__
-        if (self.point.pose.position.z > 1.5):
-            self.movement.move_forward()
+        self.movement.move_forward()
 
     def set_mode_call(self, custom_mode):
         req = SetMode.Request()
