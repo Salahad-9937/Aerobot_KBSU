@@ -24,6 +24,7 @@ class OffboardNode(Node):
         self.point.pose.position.y = 0.0
         self.point.pose.position.z = 2.3  # Высота взлета
 
+        ## Тут подключение новых модулей(файлов)
         # Инициализация модулей
         self.qr_handler = QRCodeHandler(self)    # Модуль для работы с QR-кодами
         self.movement = DroneMovement(self, self.point)  # Модуль для управления движением
@@ -40,10 +41,11 @@ class OffboardNode(Node):
         # Таймер для публикации сетпоинтов
         self.timer = self.create_timer(0.1, self.publish_setpoint)
 
+        ## Тут вызов функций из других модулей
         # Подключение подписчиков на изображения и запуск движения
-        # self.qr_handler.start_qr_detection()
         self.qr_handler.__init__
-        self.movement.move_forward()
+        if (self.point.pose.position.z > 1.5):
+            self.movement.move_forward()
 
     def set_mode_call(self, custom_mode):
         req = SetMode.Request()
