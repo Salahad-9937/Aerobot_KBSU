@@ -15,7 +15,6 @@ class OffboardNode(Node):
         self.setpoint_pub = self.create_publisher(PoseStamped, "/mavros/setpoint_position/local", 10) # публикатор координат и ориентации
         self.arming_s = self.create_client(CommandBool, "/mavros/cmd/arming")
         self.set_mode = self.create_client(SetMode, "/mavros/set_mode")
-        self.lidar_scan_sub = self.create_subscription(LaserScan, '/uav1/scan', self.lidar_callback, 10) # подписка на лидар
         self.actuator_control_pub = self.create_publisher(ActuatorControl, "/mavros/setpoint_raw/attitude", 10) # управления скоростью двигателей
 
         # Инициализация начальной позиции и состояния
@@ -23,10 +22,6 @@ class OffboardNode(Node):
         self.point.pose.position.x = 0.0
         self.point.pose.position.y = 0.0
         self.point.pose.position.z = 2.0  # Высота взлета
-
-        ## lidar intialiser
-        self.lidar = LaserScan
-        # self.lidar
 
         ## Тут подключение новых модулей(файлов)
         # Инициализация модулей
