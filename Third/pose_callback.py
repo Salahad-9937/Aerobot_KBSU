@@ -10,7 +10,7 @@ def pose_callback(self, msg):
     cosy_cosp = 1 - 2 * (orientation.y * orientation.y + orientation.z * orientation.z)
     self.yaw_angle = math.atan2(siny_cosp, cosy_cosp)
 
-    ## Получение высоты
+    ## Получение высоты, а также её поддержание
     current_altitude = msg.pose.position.z
     # Проверка высоты и регулировка тяги при необходимости
     if current_altitude < self.target_altitude:
