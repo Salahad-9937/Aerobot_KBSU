@@ -1,15 +1,16 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped, Quaternion
+from geometry_msgs.msg import PoseStamped
 from mavros_msgs.srv import CommandBool, SetMode
-# from mavros_msgs.msg import ActuatorControl
+from mavros_msgs.msg import ActuatorControl
 import math
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from set_mode_call import set_mode_call
 from convert_360_to_180 import convert_360_to_180
 from yaw_to_quaternion import yaw_to_quaternion
 from set_goal_angle import set_goal_angle
-from get_yaw_angle import get_yaw_angle
+from pose_callback import pose_callback
+
 
 class OffboardNode(Node):
     def __init__(self):
@@ -25,18 +26,20 @@ class OffboardNode(Node):
         self.setpoint_pub = self.create_publisher(PoseStamped, "/mavros/setpoint_position/local", 20)
         self.arming_s = self.create_client(CommandBool, "/mavros/cmd/arming")
         self.set_mode = self.create_client(SetMode, "/mavros/set_mode")
-        # self.actuator_control_pub = self.create_publisher(ActuatorControl, "/mavros/setpoint_raw/attitude", 10)
-        self.local_position_sub = self.create_subscription(PoseStamped, "/mavros/local_position/pose", self.get_yaw_angle, qos_profile)
+        self.thrust_publisher = self.create_publisher(ActuatorControl, '/mavros/actuator_control', 10)
+        self.local_position_sub = self.create_subscription(PoseStamped, "/mavros/local_position/pose", self.pose_callback, qos_profile)
 
         # Инициализация начальной позиции и состояния
         self.point = PoseStamped()
-        self.point.pose.position.z = 3.5  # Высота взлета
-        self.yaw_angle = 0.0  # Изначальное значение yaw
+        self.point.pose.position.z = 2.0  # Высота взлета
+        self.yaw_angle = 0.0  # Изначальное значение yaw (движение ориентируется по нему)
         self.step_distance = 0.05 # расстояние для медленного движения вперед # 0.05 оптимально
+        self.target_altitude = 2.0  # Целевая высота в метрах
+        self.thrust = 0.5           # Начальное значение тяги (настройте по необходимости)
         # заданные точки движения
         self.current_dx = self.step_distance * math.cos(self.yaw_angle*180/3.14)
         self.current_dy = self.step_distance * math.sin(self.yaw_angle*180/3.14)
-        # Хрень для движежения круга
+        # Хрень для движежения по кругу
         self.n = 90
 
         # Установка yaw на 90 градусов влево
@@ -51,8 +54,12 @@ class OffboardNode(Node):
         self.set_mode_call("OFFBOARD", True)
         self.timer = self.create_timer(0.1, self.publish_setpoint)
 
+        #TODO Код обработки лидаром комнаты
+        #TODO Код построения маршрута
+
+
         # Таймер для медленного движения вперед
-        self.forward_timer = self.create_timer(0.25, self.move_forward_slowly)
+        self.forward_timer = self.create_timer(0.25, self.move_forward)
 
     ### METHODS ###
     def yaw_to_quaternion(self, yaw):
@@ -65,11 +72,11 @@ class OffboardNode(Node):
         return convert_360_to_180(self, angle_360)
     def set_goal_angle(self, degree):
         return set_goal_angle(self, degree)
-    def get_yaw_angle(self, msg):
-        return get_yaw_angle(self, msg)
+    def pose_callback(self, msg):
+        return pose_callback(self, msg)
 
     ## метод для движения
-    def move_forward_slowly(self):
+    def move_forward(self):
         yaw_degree_angle = self.yaw_angle*180/3.14
         
         ## Задание кругового движения
@@ -94,12 +101,12 @@ class OffboardNode(Node):
                 self.current_dx = dx
                 self.current_dy = dy
                 ## Обновление позиции с учётом ориентации
-                self.point.pose.position.z = 2.5 # позиция в воздухе
+                # self.point.pose.position.z = 2.5 # позиция в воздухе
                 self.point.pose.position.x += dx
                 self.point.pose.position.y += dy
                 self.setpoint_pub.publish(self.point)
-        self.point.pose.position.z = 2.5 # позиция в воздухе
+        # self.point.pose.position.z = 2.5 # позиция в воздухе
         self.setpoint_pub.publish(self.point)
-    
+
 
 
